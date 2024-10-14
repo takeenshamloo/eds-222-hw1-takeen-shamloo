@@ -29,6 +29,8 @@ In answering the following questions, please consider the lecture content from c
 #### Load Packages
 ```{r}
 library(dplyr)
+library(ggplot2)
+library(sf)
 ```
 
 ### Question 1
@@ -44,7 +46,7 @@ govt <- readRDS(file.path("data", "HW1","airpol-PK-govt.RDS"))
 There's an implicit assumption about file organization in the code above. What is it? How can you make the code work?
 :::
 
-**Answer:** The code assumes that we are getting files from our `../data/` folder. I adjusted it to add the `../data/HW1/` sub-folder that I pulled from Cyberduck with all the important data. The file type this read function expects is also a `.RDS` type. 
+**Answer:** The code assumes that we are getting files from our `../data/` folder. I adjusted it to add the `../data/HW1/` sub-folder that I pulled from Cyberduck with all the important data. The file type this read function expects is an `.RDS` type. 
 
 1.  These dataframes have one row per pollution observation. How many pollution records are in each dataset?
 
@@ -117,12 +119,46 @@ monitors in strategic locations where the air quality is cleaner.
 
 1.  For both the government data and the crowd-sourced data, report the sample mean, sample minimum, and sample maximum value of PM 2.5 (measured in $\mu g/m^3$).
 
-```{r}
+**Answer:**
 
+```{r}
+# Using the summarize() function to find the mean, min, and max PM values.
+crowdsourced_summary <- crowdsourced_unique_monitors %>%
+  ungroup() %>% # Remove our previous (long, lat) grouping
+  summarize(PM_mean = mean(PM),
+            PM_min = min(PM),
+            PM_max = max(PM))
+
+# Print crowdsourced mean, min, and max
+cat("Crowdsourced data", "PM Mean:", crowdsourced_summary$PM_mean, "|",
+  "PM Min:", crowdsourced_summary$PM_min, "|",
+  "PM Max:", crowdsourced_summary$PM_max, "\nMeasured in \\mu g/m^3", "\n")
+
+# Same process as above 
+govt_summary <- govt_unique_monitors %>%
+  ungroup() %>% # Remove our previous (long, lat) grouping
+  summarize(PM_mean = mean(PM),
+            PM_min = min(PM),
+            PM_max = max(PM))
+
+# Print government mean, min, and max
+cat("Government data", "PM Mean:", govt_summary$PM_mean, "|",
+  "PM Min:", govt_summary$PM_min, "|",
+  "PM Max:", govt_summary$PM_max, "\nMeasured in \\mu g/m^3", "\n")
 ```
 
 2.  Discuss any key differences that you see between these two samples.
+
+**Answer:** The `government` data represents a **\~56.58%** decrease in mean 
+2.5PM values. Noticeably the max for `government` data is less than the mean 
+for the `crowdsourced` data. The `crowdsourced` maximum is almost double the government max. The mins for both data-sets are similar.
+
 3.  Are the differences in mean pollution as expected, given what we know about the sampling strategies?
+
+**Answer:** Yes, the mean particulate matter from our `government` collected 
+PM2.5 is **\~56.28%** less at an average of **\~29.65** $\mu g/m^3$ which is 
+a pretty drastic difference indicating that there is indeed a strategic role 
+played by the government when collecting air quality data in Lahore.
 
 ### Question 4
 
@@ -132,9 +168,34 @@ Use the location of the air pollution stations for both of the sampling strategi
 `longitude` indicates location in the *x*-direction, while `latitude` indicates location in the *y*-direction. With `ggplot2` this should be nothing fancy. We'll do more spatial data in `R` later in the course.
 :::
 
+```{r}
+merged_df <- bind_rows(
+  (crowdsourced_unique_monitors %>%
+     ungroup() %>%
+     mutate(source = "crowd")),
+  (govt_unique_monitors %>%
+     ungroup() %>%
+     mutate(source = "govt")))
+```
+
+```{r}
+# Turned our df into an sf object with longitude and latitude as geometry
+merged_sf <- st_as_sf(merged_df, coords = c("longitude", "latitude"), crs = 4326)
+
+# Plot
+ggplot() +
+  geom_sf(data = merged_sf, aes(size = PM, color = source), alpha = 0.5) +
+  labs(title = "Lahore's PM data in micro grams per cubic meter ",
+    x = "Longitude", 
+    y = "Latitude") +
+  theme_bw()
+```
+
 ### Question 5
 
 The local newspaper in Pakistan, *Dawn*, claims that the government is misreporting the air pollution levels in Lahore. Do the locations of monitors in question 4, relative to crowd-sourced monitors, suggest anything about a possible political bias?
+
+**Answer: ** Based on the plot in Question 4 if the government stations are concentrated in areas with less pollution (which they are) this would suggest that the government is selectively placing monitors to under report pollution levels. The crowd-sourced monitors are spread distributed pretty evenly which could indicate a more accurate representation of air quality. We can better see that the government is using a selection/location bias.
 
 ### Question 6
 
@@ -150,8 +211,37 @@ First, generate a *random sample* of size $n=1000$ air pollution records by (i) 
 `bind_rows()` may be helpful.
 :::
 
+```{r}
+# Setting the seed for our random sample
+set.seed(1)
+
+# Generate a df with a random sample of n = 1000
+random <- merged_df %>%
+  sample_n(size = 1000, replace = TRUE)
+
+# Print mean PM of sample
+cat("Mean PM of n = 1000 sample:", mean(random$PM), "\\mu g/m^3")
+```
+
 Second, create a *stratified random sample*. Do so by (i) stratifying your pooled data-set into strata of 0.01 degrees of latitude, and (ii) randomly sampling 200 air pollution observations from each stratum.
+
+```{r}
+merged_df <- merged_df %>%
+  mutate(stratum = floor(latitude * 100) / 100)
+
+strat_df <- merged_df %>%
+  group_by(stratum) %>%
+  sample_n(size = 200, replace = TRUE) %>%
+  ungroup()
+
+# Print mean PM of sample
+cat("Mean PM of stratified n = 200 sample:", mean(strat_df$PM), "\\mu g/m^3")
+```
 
 #### Question 6.2
 
 Compare estimated means of PM 2.5 for each sampling strategy to the NASA estimate of 89.2 $\mu g/m^3$. Which sample seems to match the satellite data best? What would you recommend the Prime Minister do? Does your proposed sampling strategy rely more on government or on crowd-sourced data? Why might that be the case?
+
+
+**Answer:** Our stratified sample mean **64.125 µg/m³** is closer to the NASA estimate. This suggests that location-based sampling is more effective in representing the pollution level The PM across Lahore. The Prime Minister should start using stratified sampling to ensure a more reliable estimate of air quality.
+
