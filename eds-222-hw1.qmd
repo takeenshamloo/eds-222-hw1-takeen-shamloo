@@ -2,6 +2,8 @@
 title: "EDS 222: Homework 1"
 date: "Assigned ???, due ???"
 author: "Your Name Here"
+editor_options: 
+  chunk_output_type: console
 ---
 
 ## Background
@@ -24,25 +26,61 @@ In answering the following questions, please consider the lecture content from c
 
 ## Assessment
 
+#### Load Packages
+```{r}
+library(dplyr)
+```
+
 ### Question 1
 
 Load the data from each source and label it as `crowdsourced` and `govt` accordingly. For example:
 
-``` r
-crowdsourced <- readRDS(file.path("data", "airpol-PK-crowdsourced.RDS"))
-govt <- readRDS(file.path("data", "airpol-PK-govt.RDS"))
+```{r}
+crowdsourced <- readRDS(file.path("data", "HW1", "airpol-PK-crowdsourced.RDS"))
+govt <- readRDS(file.path("data", "HW1","airpol-PK-govt.RDS"))
 ```
 
 ::: callout-warning
 There's an implicit assumption about file organization in the code above. What is it? How can you make the code work?
 :::
 
+**Answer:** The code assumes that we are getting files from our `../data/` folder. I adjusted it to add the `../data/HW1/` sub-folder that I pulled from Cyberduck with all the important data. The file type this read function expects is also a `.RDS` type. 
+
 1.  These dataframes have one row per pollution observation. How many pollution records are in each dataset?
+
+**Answer:** 
+
+```{r}
+# Using nrow() to check the row count of each dataframe.
+cat("The `crowdsourced` dataframe has", nrow(crowdsourced), "pollution records.\n")
+cat("The `govt` dataframe has", nrow(govt), "pollution records.")
+```
+
 2.  Each monitor is located at a unique latitude and longitude location. How many unique monitors are in each dataset?
 
 ::: callout-tip
 `group_by(longitude,latitude)` and `cur_group_id()` in `dplyr` will help in creating a unique identifier for each (longitude, latitude) pair.
 :::
+
+**Answer:**
+
+```{r}
+# Group our dataframes by group_by(long, lat) 
+# mutate() to add an `monitor_id` column to differentiate each monitor by grouping.
+crowdsourced_unique_monitors <- crowdsourced %>%
+  group_by(longitude, latitude) %>%
+  mutate(monitor_id = cur_group_id())
+
+# Doing the same thing to this dataframe. 
+govt_unique_monitors <- govt %>%
+  group_by(longitude, latitude) %>%
+    mutate(monitor_id = cur_group_id())
+
+# Printing out the number of unique monitors by using n_distinct() to sum 
+# unique values in our newly created `monitor_id` column.
+cat("The `crowdsourced` dataframe has", n_distinct(crowdsourced_unique_monitors$monitor_id), "unique monitors.\n")
+cat("The `govt` dataframe has", n_distinct(govt_unique_monitors$monitor_id), "unique monitors.")
+```
 
 ### Question 2
 
@@ -50,13 +88,39 @@ The goal of pollution monitoring in Lahore is to measure the average pollution c
 
 1.  What is the *population* in this setting? Please be precise.
 
+**Answer:** The population we are taking a look at is the entirety of the 
+air quality data in Lahore, Pakistan from Nov 4th 2018 to Nov 30th 2019. 
+
 2.  What are the *samples* in this setting? Please be precise.
 
+**Answer:** Our population is distributed into to samples: 
+
+- `Crowdsourced monitors:` Which consist of monitors voluntarily installed by individuals which reflects air quality in homes across and localized areas of 
+Lahore.
+
+- `Government monitors:` Which consist of monitors installed at specific outdoor
+locations by government officials. We plan to question whether these monitors 
+could be strategically placed in areas with relatively cleaner air.
+
 3.  These samples were not randomly collected from across locations in Lahore. Given the sampling approaches described above, discuss possible biases that may enter when we use these samples to construct estimates of population parameters.
+
+**Answer:** Given the sampling techniques described we can potentially perceive
+a selection bias in the `crowdsourced` data where people who can afford to 
+purchase monitors may cause wealthier or environmentally conscious populations 
+to become over represented. Another bias we can potentially perceive is a location
+bias in both our data-sets where our `crowdsourced` indoor air quality 
+measurements may not accurately reflect outdoor conditions. Furthermore, in 
+reference to the `government` data, the officials could have placed these 
+monitors in strategic locations where the air quality is cleaner.
 
 ### Question 3
 
 1.  For both the government data and the crowd-sourced data, report the sample mean, sample minimum, and sample maximum value of PM 2.5 (measured in $\mu g/m^3$).
+
+```{r}
+
+```
+
 2.  Discuss any key differences that you see between these two samples.
 3.  Are the differences in mean pollution as expected, given what we know about the sampling strategies?
 
