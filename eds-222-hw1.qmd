@@ -158,7 +158,9 @@ for the `crowdsourced` data. The `crowdsourced` maximum is almost double the gov
 **Answer:** Yes, the mean particulate matter from our `government` collected 
 PM2.5 is **\~56.28%** less at an average of **\~29.65** $\mu g/m^3$ which is 
 a pretty drastic difference indicating that there is indeed a strategic role 
-played by the government when collecting air quality data in Lahore.
+played by the government when collecting air quality data in Lahore. 
+
+The crowdsourced data selection and location biases. Crowdsourced monitors are often installed by individuals who can afford them or are particularly concerned about air quality, which might over represent more affluent or environmentally conscious neighborhoods. These monitors are often indoors, so the readings may not accurately reflect outdoor conditions, leading to a location bias. This could result in an uneven spatial distribution of data, possibly skewing pollution measurements towards certain areas, and could impact the reliability of crowdsourced data in representing overall air quality across Lahore.
 
 ### Question 4
 
@@ -212,12 +214,18 @@ First, generate a *random sample* of size $n=1000$ air pollution records by (i) 
 :::
 
 ```{r}
+# Print dimensions of merged_df dataset
+cat("Our dataset `merged_df` has dimensions", dim(merged_df), "(rows,cols) \n")
+
 # Setting the seed for our random sample
 set.seed(1)
 
 # Generate a df with a random sample of n = 1000
 random <- merged_df %>%
   sample_n(size = 1000, replace = TRUE)
+
+# Print dimensions of random sample dataset
+cat("Our random sample has dimensions ", dim(random), "(rows,cols) \n")
 
 # Print mean PM of sample
 cat("Mean PM of n = 1000 sample:", mean(random$PM), "\\mu g/m^3")
@@ -234,6 +242,9 @@ strat_df <- merged_df %>%
   sample_n(size = 200, replace = TRUE) %>%
   ungroup()
 
+# Print dimensions of stratified sample dataset
+cat("Our random sample has dimensions ", dim(strat_df), "(rows,cols) \n")
+
 # Print mean PM of sample
 cat("Mean PM of stratified n = 200 sample:", mean(strat_df$PM), "\\mu g/m^3")
 ```
@@ -242,6 +253,20 @@ cat("Mean PM of stratified n = 200 sample:", mean(strat_df$PM), "\\mu g/m^3")
 
 Compare estimated means of PM 2.5 for each sampling strategy to the NASA estimate of 89.2 $\mu g/m^3$. Which sample seems to match the satellite data best? What would you recommend the Prime Minister do? Does your proposed sampling strategy rely more on government or on crowd-sourced data? Why might that be the case?
 
+```{r}
+# Show breakdown of data sources in stratified sample
+stratified_breakdown <- strat_df %>%
+  group_by(source) %>%
+  summarize(count = n())
 
-**Answer:** Our stratified sample mean **64.125 µg/m³** is closer to the NASA estimate. This suggests that location-based sampling is more effective in representing the pollution level The PM across Lahore. The Prime Minister should start using stratified sampling to ensure a more reliable estimate of air quality.
+print(stratified_breakdown)
 
+# Print the mean of the stratified sample
+cat("Mean PM of stratified n = 200 sample:", mean(strat_df$PM), "\\mu g/m^3")
+```
+
+**Answer:** Our stratified sample mean **64.125 µg/m³** is closer to the NASA estimate. This suggests that location-based sampling is more effective in representing the pollution level The PM across Lahore. 
+
+The breakdown of data sources in the stratified sample shows that 998 observations are from crowdsourced monitors and 202 are from government monitors. This heavier reliance on crowdsourced data likely improves the sample's spatial coverage across diverse areas, making it a better representative of the overall pollution levels in Lahore.
+
+I recommend that the Prime Minister adopt a stratified sampling approach that draws on both government and crowdsourced data to capture a balanced view of air quality across the city.
